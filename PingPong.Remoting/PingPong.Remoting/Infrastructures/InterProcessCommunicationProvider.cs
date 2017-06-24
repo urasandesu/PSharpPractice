@@ -32,6 +32,7 @@
 using Microsoft.PSharp;
 using Microsoft.PSharp.Net;
 using System;
+using System.Collections.Concurrent;
 using System.ServiceModel;
 
 namespace PingPong.Remoting.Infrastructures
@@ -41,18 +42,12 @@ namespace PingPong.Remoting.Infrastructures
         where TPSharpEventSendable : IPSharpEventSendable
     {
         readonly PSharpRuntime m_runtime;
-        readonly string m_serviceHostUri;
-        readonly string m_endpointUri;
+        readonly string m_localEndpointUri;
 
-        TPSharpEventSendable m_channel;
-        TPSharpEventSendable Channel
+        readonly ConcurrentDictionary<string, TPSharpEventSendable> m_channel = new ConcurrentDictionary<string, TPSharpEventSendable>();
+        TPSharpEventSendable GetOrAddChannel(string endpointUri)
         {
-            get
-            {
-                if (m_channel == null)
-                    m_channel = CreateChannel(m_endpointUri);
-                return m_channel;
-            }
+            return m_channel.GetOrAdd(endpointUri, CreateChannel);
         }
 
         TPSharpEventSendable CreateChannel(string endpointUri)
@@ -68,7 +63,7 @@ namespace PingPong.Remoting.Infrastructures
             get
             {
                 if (m_serviceHost == null)
-                    m_serviceHost = CreateServiceHost(m_serviceHostUri);
+                    m_serviceHost = CreateServiceHost(m_localEndpointUri);
                 return m_serviceHost;
             }
         }
@@ -81,11 +76,10 @@ namespace PingPong.Remoting.Infrastructures
             return serviceHost;
         }
 
-        protected InterProcessCommunicationProvider(PSharpRuntime runtime, string serviceHostName, string endpointName)
+        protected InterProcessCommunicationProvider(PSharpRuntime runtime, string localEndpointName)
         {
             m_runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-            m_serviceHostUri = $"net.pipe://localhost/{ serviceHostName ?? throw new ArgumentNullException(nameof(serviceHostName)) }";
-            m_endpointUri = $"net.pipe://localhost/{ endpointName ?? throw new ArgumentNullException(nameof(endpointName)) }";
+            m_localEndpointUri = $"net.pipe://localhost/{ localEndpointName ?? throw new ArgumentNullException(nameof(localEndpointName)) }";
 
             ServiceHost.Open();
         }
@@ -97,12 +91,12 @@ namespace PingPong.Remoting.Infrastructures
 
         void INetworkProvider.RemoteSend(MachineId target, Event e)
         {
-            Channel.SendEvent(target, e);
+            GetOrAddChannel(target.Endpoint).SendEvent(target, e);
         }
 
         string INetworkProvider.GetLocalEndpoint()
         {
-            return string.Empty;
+            return m_localEndpointUri;
         }
 
         void IPSharpEventSendable.SendEvent(MachineId target, Event e)

@@ -47,7 +47,7 @@ namespace PingPong.Remoting.Host
             ServiceLocator.SetLocatorProvider(() => unityServiceLocator);
 
             var runtime = PSharpRuntime.Create();
-            using (var networkProvider = new DomainCommunicationProvider(runtime, "host", "guest"))
+            using (var networkProvider = new DomainCommunicationProvider(runtime, "host"))
             {
                 runtime.SetNetworkProvider(networkProvider);
 

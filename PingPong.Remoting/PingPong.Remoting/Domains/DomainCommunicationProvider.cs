@@ -36,8 +36,8 @@ namespace PingPong.Remoting.Domains
 {
     public class DomainCommunicationProvider : InterProcessCommunicationProvider<IDomainEventSendable>, IDomainEventSendable
     {
-        public DomainCommunicationProvider(PSharpRuntime runtime, string serviceHostName, string endpointName) :
-            base(runtime, serviceHostName, endpointName)
+        public DomainCommunicationProvider(PSharpRuntime runtime, string serviceHostName) :
+            base(runtime, serviceHostName)
         { }
     }
 }
